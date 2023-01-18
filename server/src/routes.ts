@@ -4,7 +4,7 @@ import { prisma } from './lib/prisma';
 import { z } from 'zod';
 
 export async function appRoutes(app: FastifyInstance) {
-  app.post('/habits', async (request) => {
+  app.post('/habits', async request => {
     const createHabitBody = z.object({
       title: z.string(),
       weekDays: z.array(z.number().min(0).max(6)),
@@ -28,7 +28,7 @@ export async function appRoutes(app: FastifyInstance) {
     });
   });
 
-  app.get('/day', async (request) => {
+  app.get('/day', async request => {
     const getDayParams = z.object({
       date: z.coerce.date(),
     });
@@ -62,8 +62,8 @@ export async function appRoutes(app: FastifyInstance) {
       include: {
         dayHabits: {
           select: {
-            habit_id: true
-          }
+            habit_id: true,
+          },
         },
       },
     });
@@ -74,5 +74,84 @@ export async function appRoutes(app: FastifyInstance) {
       possibleHabits,
       completedHabits,
     };
+  });
+
+  app.patch('/habits/:id/toggle', async request => {
+    const toggleHabitParams = z.object({
+      id: z.string().uuid(),
+    });
+
+    const { id } = toggleHabitParams.parse(request.params);
+
+    const today = dayjs().startOf('day').toDate();
+
+    let day = await prisma.day.findUnique({
+      where: {
+        date: today,
+      },
+    });
+
+    if (!day) {
+      day = await prisma.day.create({
+        data: {
+          date: today,
+        },
+      });
+    }
+
+    //checking if the user already checked the habit how completed
+    const dayHabit = await prisma.dayHabit.findUnique({
+      where: {
+        day_id_habit_id: {
+          day_id: day.id,
+          habit_id: id,
+        },
+      },
+    });
+
+    if (dayHabit) {
+      await prisma.dayHabit.delete({
+        where: {
+          id: dayHabit.id,
+        },
+      });
+    } else {
+      await prisma.dayHabit.create({
+        data: {
+          day_id: day.id,
+          habit_id: id,
+        },
+      });
+    }
+  });
+
+  app.get('/summary', async () => {
+    //$queryRaw allow us to write raw queies
+    const summary = await prisma.$queryRaw`
+    SELECT 
+      D.id, 
+      D.date,
+      (
+        SELECT 
+        -- converting the count(*) that by default is a bigInt to float using the cast
+        cast(count(*) as float)
+        FROM day_habits DH
+        WHERE DH.day_id = D.id
+      ) as completed,
+      (
+        SELECT 
+          cast(count(*) as float)
+        FROM habit_week_days HWD
+        JOIN habits H
+          ON H.id = HWD.habit_id
+        WHERE
+         -- using the strftime to transform the default format date of sqlite to get just the week day that is the information that we store on database. We're dividing the D.date by 1000 because the sqlite stores the data how milliseconds so we need to get it how seconds
+          HWD.week_day = cast(strftime('%w', D.date/1000, 'unixepoch') as int)
+          AND H.created_at <= D.date
+      ) as amount
+    FROM days D
+    `;
+
+    return summary;
   });
 }
