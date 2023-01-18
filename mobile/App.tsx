@@ -1,12 +1,14 @@
-import { StyleSheet, Text, View, StatusBar } from 'react-native';
+import './src/lib/dayjs';
 import {
-  useFonts,
   Inter_400Regular,
   Inter_600SemiBold,
   Inter_700Bold,
   Inter_800ExtraBold,
+  useFonts,
 } from '@expo-google-fonts/inter';
+import { StatusBar } from 'react-native';
 import { Loading } from './src/components/Loading';
+import { Home } from './src/screens/Home';
 
 export default function App() {
   const [fontsLoaded] = useFonts({
@@ -19,24 +21,13 @@ export default function App() {
   if (!fontsLoaded) return <Loading />;
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.text}>
-        Open up App.tsx to start working on your app! Legal
-      </Text>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
-    </View>
+    <>
+      <Home />
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor="transparent"
+        translucent
+      />
+    </>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#09090A',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  text: {
-    color: '#fff',
-    fontFamily: 'Inter_800ExtraBold',
-  },
-});
