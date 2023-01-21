@@ -1,6 +1,6 @@
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import dayjs from 'dayjs';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Text, View, ScrollView, Alert } from 'react-native';
 import { DAY_SIZE, HabitDay } from '../components/HabitDay';
 import { Header } from '../components/Header';
@@ -42,9 +42,12 @@ export function Home() {
     }
   }
 
-  useEffect(() => {
-    getSummaryInformation();
-  }, []);
+  // useFocusEffect is similar to useEffect, but it's used to execute a method when focus some screen, so it'll render the method always. It's recommended to execute it with useCallback to avoid many of renders on screens
+  useFocusEffect(
+    useCallback(() => {
+      getSummaryInformation();
+    }, []),
+  );
 
   if (loading) return <Loading />;
 
